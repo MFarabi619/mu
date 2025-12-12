@@ -20,9 +20,23 @@
 
   # services.postgres.enable = true;
 
-  scripts.hello.exec = ''
-    echo hello from $GREET
-  '';
+  scripts = {
+    list = {
+      exec = ''
+        probe-rs list
+        comchan --list-ports
+      '';
+    };
+
+    clean = {
+      exec = "git clean -fdX";
+    };
+
+    kernel = {
+      description = " 🎉 Fire up the Microvisor Kernel";
+      exec = "devenv up";
+    };
+  };
 
   enterShell = ''
     hello         # Run scripts directly
