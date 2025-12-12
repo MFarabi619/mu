@@ -23,6 +23,7 @@ import requests
 from flask import Flask, request, send_file, jsonify
 
 # Hardcoded API key per earlier request. Replace with your own key management.
+ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
 VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
 
 VERBOSE = os.environ.get("VERBOSE", "1") != "0"
