@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Minimal HTTP server: GET an MP3 URL, transcribe with ElevenLabs, reply via tgpt, and
 return the spoken answer as audio/mpeg.
@@ -21,9 +20,8 @@ from typing import Optional
 import requests
 from flask import Flask, request, send_file, jsonify
 
-# Hardcoded API key per earlier request. Replace with your own key management.
-ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "")
-VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "")
+ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
+VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID")
 
 VERBOSE = os.environ.get("VERBOSE", "1") != "0"
 
