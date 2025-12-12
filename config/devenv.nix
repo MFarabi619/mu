@@ -10,6 +10,7 @@
   imports = [
     ./languages
     ./packages.nix
+    ./scripts.nix
   ];
 
   env = {
@@ -19,24 +20,6 @@
   # processes.dev.exec = "${lib.getExe pkgs.watchexec} -n -- ls -la";
 
   # services.postgres.enable = true;
-
-  scripts = {
-    list = {
-      exec = ''
-        probe-rs list
-        comchan --list-ports
-      '';
-    };
-
-    clean = {
-      exec = "git clean -fdX";
-    };
-
-    kernel = {
-      description = " 🎉 Fire up the Microvisor Kernel";
-      exec = "devenv up";
-    };
-  };
 
   enterShell = ''
     hello         # Run scripts directly

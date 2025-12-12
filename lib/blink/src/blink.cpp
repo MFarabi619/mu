@@ -1,4 +1,3 @@
-#include "board.h"
 #include <Arduino.h>
 
 #if CONFIG_FREERTOS_UNICORE
@@ -18,7 +17,7 @@ void toggleLED(void *parameter) {
   }
 }
 
-void setup() {
+void freertosSetup() {
   Serial.begin(UART_BAUD);
 
   Serial.println("ESP32 booted.");
@@ -36,5 +35,3 @@ void setup() {
   // in vanilla FreeRTOS, call vTaskStartScheduler() in main after setting up
   // tasks
 }
-
-void loop() {}
