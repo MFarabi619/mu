@@ -15,6 +15,8 @@
 
   env = {
     GREET = "devenv";
+    ELEVENLABS_API_KEY = "";
+    ELEVENLABS_VOICE_ID = "";
   };
 
   # processes.dev.exec = "${lib.getExe pkgs.watchexec} -n -- ls -la";
