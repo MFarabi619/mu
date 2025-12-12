@@ -201,6 +201,12 @@ def maybe_execute_command(user_text: str) -> Optional[str]:
         return _execute_command("left", "http://10.1.61.152/left")
     if normalized in {"turn_right", "right"}:
         return _execute_command("right", "http://10.1.61.152/right")
+    if normalized in {"rotate", "rotate_camera", "rotate_device"}:
+        return _execute_command("rotate", "http://10.1.61.152/sweep")
+    if normalized in {"sweep"}:
+        return _execute_command("sweep", "http://10.1.61.152/sweep")
+    if normalized in {"stop", "halt"}:
+        return _execute_command("stop", "http://10.1.61.152/stop")
     return None
 
 
