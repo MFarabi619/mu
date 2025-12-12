@@ -6,71 +6,96 @@
 
   <meta name="viewport" content="width=device-width,initial-scale=1">
 
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
 </head>
 
 <body class="p-6 space-y-6">
 
-  <h1 class="text-3xl font-bold mb-6">ESP32 Control Panel</h1>
+  <h1 class="text-3xl font-bold mb-6">mu Control Panel</h1>
 
-  <!-- LED CARD -->
   <div class="card bg-base-200 shadow-xl p-6 max-w-sm">
     <div class="text-sm opacity-70 mb-2">LED State</div>
     <div id="state-display" class="font-mono text-2xl mb-4">OFF</div>
     <button id="toggle-btn" class="btn btn-primary w-full">Turn ON</button>
   </div>
 
-  <!-- SERVO CARD -->
   <div class="card bg-base-200 shadow-xl p-6 max-w-sm">
     <div class="text-sm opacity-70 mb-2">Servo Control</div>
     <div class="flex flex-wrap gap-2">
-      <button class="btn btn-sm" data-endpoint="/servo/left">Left</button>
-      <button class="btn btn-sm" data-endpoint="/servo/center">Center</button>
-      <button class="btn btn-sm" data-endpoint="/servo/right">Right</button>
-      <button class="btn btn-sm" data-endpoint="/servo/sweep">Sweep</button>
-      <button class="btn btn-sm" data-endpoint="/servo/stop">Stop</button>
+      <button id="servo-left"   class="btn btn-sm">Left</button>
+      <button id="servo-center" class="btn btn-sm">Center</button>
+      <button id="servo-right"  class="btn btn-sm">Right</button>
+      <button id="servo-sweep"  class="btn btn-sm">Sweep</button>
+      <button id="servo-stop"   class="btn btn-sm">Stop</button>
     </div>
   </div>
 
   <script>
+    console.log("[BOOT] Frontend loaded");
+
     const btn = document.getElementById("toggle-btn");
     const stateEl = document.getElementById("state-display");
 
     let isOn = false;
     let busy = false;
 
-    // LED control
     btn.addEventListener("click", async () => {
-      if (busy) return;
+      if (busy) {
+        console.warn("[LED] Click ignored, busy");
+        return;
+      }
       busy = true;
 
       const endpoint = isOn ? "/off" : "/on";
+      console.log("[LED] Sending request to", endpoint);
 
       try {
-        await fetch(endpoint);
-        isOn = !isOn;
-        stateEl.textContent = isOn ? "ON" : "OFF";
-        btn.textContent = isOn ? "Turn OFF" : "Turn ON";
+        const res = await fetch(endpoint);
+        console.log("[LED] Response status:", res.status);
+        if (!res.ok) {
+          console.error("[LED] Non-OK response", res.status);
+        } else {
+          isOn = !isOn;
+          stateEl.textContent = isOn ? "ON" : "OFF";
+          btn.textContent = isOn ? "Turn OFF" : "Turn ON";
+        }
       } catch (err) {
-        console.error("toggle fail", err);
+        console.error("[LED] Toggle failed", err);
       }
 
       busy = false;
     });
 
-    // Servo control
-    document.querySelectorAll("[data-endpoint]").forEach((b) => {
-      b.addEventListener("click", async () => {
-        b.disabled = true;
-        try {
-          await fetch(b.dataset.endpoint);
-        } catch (e) {
-          console.error("servo error", e);
+    async function callServoEndpoint(path) {
+      console.log("[SERVO] Calling", path);
+      try {
+        const res = await fetch(path);
+        console.log("[SERVO] Response", path, "=", res.status);
+        if (!res.ok) {
+          console.error("[SERVO] Non-OK response for", path, res.status);
         }
-        b.disabled = false;
-      });
-    });
+      } catch (e) {
+        console.error("[SERVO] Request error for", path, e);
+      }
+    }
+
+    document.getElementById("servo-left")
+            .addEventListener("click", () => callServoEndpoint("/left"));
+
+    document.getElementById("servo-center")
+            .addEventListener("click", () => callServoEndpoint("/center"));
+
+    document.getElementById("servo-right")
+            .addEventListener("click", () => callServoEndpoint("/right"));
+
+    document.getElementById("servo-sweep")
+            .addEventListener("click", () => callServoEndpoint("/sweep"));
+
+    document.getElementById("servo-stop")
+            .addEventListener("click", () => callServoEndpoint("/stop"));
   </script>
 
 </body>
