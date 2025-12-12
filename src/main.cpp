@@ -1,40 +1,41 @@
-#include "board.h"
-#include <Arduino.h>
+#include <ESPAsyncWebServer.h>
+#include <WiFi.h>
 
-#if CONFIG_FREERTOS_UNICORE
-static const BaseType_t app_cpu = 0;
-#else
-static const BaseType_t app_cpu = 1;
-#endif
+const char *ssid = "openws";
+const char *password = "ithurtswhenip";
 
-#define LED_DELAY 200
-
-void toggleLED(void *parameter) {
-  while (1) {
-    digitalWrite(LED_BUILTIN, HIGH);
-    vTaskDelay(LED_DELAY / portTICK_PERIOD_MS);
-    digitalWrite(LED_BUILTIN, LOW);
-    vTaskDelay(LED_DELAY / portTICK_PERIOD_MS);
-  }
-}
+AsyncWebServer server(80);
 
 void setup() {
-  Serial.begin(UART_BAUD);
-
-  Serial.println("ESP32 booted.");
   pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
 
-  xTaskCreatePinnedToCore( // Use xTaskCreate() in vanilla FreeRTOS
-      toggleLED,           // function to be called
-      "Toggle LED",        // name of task
-      1024,                // stack size (bytes in ESP32, words in FreeRTOS)
-      NULL,                // parameter to pass to function
-      1,                   // task priority (0 to configMAX_PRIORITIES - 1)
-      NULL,                // task handle
-      app_cpu);            // run on one core for demo purposes (ESP32 only)
+  Serial.begin(115200);
 
-  // in vanilla FreeRTOS, call vTaskStartScheduler() in main after setting up
-  // tasks
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  Serial.print("WiFi...");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(300);
+    Serial.print(".");
+  }
+
+  Serial.println();
+  Serial.print("Connected: ");
+  Serial.println(WiFi.localIP());
+
+  server.on("/on", HTTP_GET, [](AsyncWebServerRequest *req) {
+    digitalWrite(LED_BUILTIN, HIGH);
+    req->send(200, "text/plain", "LED ON");
+  });
+
+  server.on("/off", HTTP_GET, [](AsyncWebServerRequest *req) {
+    digitalWrite(LED_BUILTIN, LOW);
+    req->send(200, "text/plain", "LED OFF");
+  });
+
+  server.begin();
 }
 
 void loop() {}
