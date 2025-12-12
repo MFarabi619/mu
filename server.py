@@ -1,12 +1,14 @@
+#!/usr/bin/env python3
 """
-Minimal HTTP server: GET an MP3 URL, transcribe with ElevenLabs, reply via tgpt, and
-return the spoken answer as audio/mpeg.
+Minimal HTTP server: accept audio (URL or uploaded file), transcribe with ElevenLabs,
+reply via tgpt, and return the spoken answer as audio/mpeg.
 
-Endpoint:
-  GET /chat?audio_url=...  -> returns mp3 audio of the reply
+Endpoints:
+  GET  /chat?audio_url=...           -> returns mp3 audio of the reply
+  POST /chat (form-data, key=audio)  -> returns mp3 audio of the reply
 
 Run:
-  pip install flask requests playsound soundfile sounddevice  # playsound/sounddevice not needed here but share deps
+  pip install flask requests
   export ELEVENLABS_API_KEY="sk-..."  # or edit the constant below
   python voice_server.py
 """
@@ -20,8 +22,8 @@ from typing import Optional
 import requests
 from flask import Flask, request, send_file, jsonify
 
-ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY")
-VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID")
+# Hardcoded API key per earlier request. Replace with your own key management.
+VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
 
 VERBOSE = os.environ.get("VERBOSE", "1") != "0"
 
@@ -35,21 +37,27 @@ def log(msg: str) -> None:
 
 def ensure_api_key() -> None:
     if not ELEVENLABS_API_KEY:
-        raise RuntimeError(
-            "Missing ElevenLabs API key. Set ELEVENLABS_API_KEY or edit the constant."
-        )
+        raise RuntimeError("Missing ElevenLabs API key. Set ELEVENLABS_API_KEY or edit the constant.")
 
 
-@app.route("/chat", methods=["GET"])
+@app.route("/chat", methods=["GET", "POST"])
 def chat() -> "flask.Response":
     ensure_api_key()
-    audio_url = request.args.get("audio_url")
-    if not audio_url:
-        return jsonify({"error": "audio_url is required"}), 400
-
-    log(f"Received audio_url={audio_url}")
-    try:
+    audio_path = None
+    if request.method == "POST":
+        uploaded = request.files.get("audio")
+        if not uploaded:
+            return jsonify({"error": "audio (file) is required in form-data"}), 400
+        audio_path = save_uploaded_audio(uploaded)
+        log(f"Received uploaded audio -> {audio_path}")
+    else:
+        audio_url = request.args.get("audio_url")
+        if not audio_url:
+            return jsonify({"error": "audio_url is required"}), 400
+        log(f"Received audio_url={audio_url}")
         audio_path = download_audio(audio_url)
+
+    try:
         user_text = transcribe(audio_path)
         reply = generate_reply(user_text)
         reply_audio_path = text_to_speech(reply)
@@ -77,6 +85,15 @@ def download_audio(url: str) -> str:
             tmp.write(chunk)
     tmp.close()
     log(f"Downloaded audio to {tmp.name}")
+    return tmp.name
+
+
+def save_uploaded_audio(uploaded) -> str:
+    """Save uploaded file to a temp MP3 path."""
+    tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
+    uploaded.save(tmp.name)
+    tmp.close()
+    log(f"Saved uploaded audio to {tmp.name}")
     return tmp.name
 
 
@@ -110,9 +127,7 @@ def text_to_speech(text: str, voice_id: str = VOICE_ID) -> str:
         "voice_settings": {"stability": 0.4, "similarity_boost": 0.8},
     }
     log(f"TTS request with model {payload['model_id']} voice {voice_id}")
-    with requests.post(
-        url, headers=headers, json=payload, stream=True, timeout=60
-    ) as resp:
+    with requests.post(url, headers=headers, json=payload, stream=True, timeout=60) as resp:
         log(f"TTS status {resp.status_code}")
         _raise_elevenlabs_for_status(resp, "text-to-speech")
         tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
@@ -180,3 +195,4 @@ def _strip_tgpt_spinner(output: str) -> str:
 if __name__ == "__main__":
     log("Starting server on http://0.0.0.0:5000")
     app.run(host="0.0.0.0", port=5000, debug=False)
+
