@@ -60,7 +60,8 @@ def chat() -> "flask.Response":
 
     try:
         user_text = transcribe(audio_path)
-        reply = generate_reply(user_text)
+        command_reply = maybe_execute_command(user_text)
+        reply = command_reply if command_reply else generate_reply(user_text)
         reply_audio_path = text_to_speech(reply)
     except Exception as exc:
         log(f"Error: {exc}")
@@ -191,6 +192,28 @@ def _strip_tgpt_spinner(output: str) -> str:
             continue
         cleaned_lines.append(stripped)
     return "\n".join(cleaned_lines).strip()
+
+
+def maybe_execute_command(user_text: str) -> Optional[str]:
+    """Recognize simple commands and hit device endpoints."""
+    normalized = user_text.strip().lower().replace(" ", "_")
+    if normalized in {"turn_left", "left"}:
+        return _execute_command("left", "http://10.1.61.152/left")
+    if normalized in {"turn_right", "right"}:
+        return _execute_command("right", "http://10.1.61.152/right")
+    return None
+
+
+def _execute_command(name: str, url: str) -> str:
+    log(f"Executing command {name} via {url}")
+    try:
+        resp = requests.get(url, timeout=5)
+        resp.raise_for_status()
+        log(f"Command {name} success: {resp.status_code}")
+        return f"{name.replace('_', ' ').title()}."
+    except Exception as exc:
+        log(f"Command {name} failed: {exc}")
+        return f"Failed to {name.replace('_', ' ')}."
 
 
 if __name__ == "__main__":
