@@ -4,5 +4,6 @@
     ./cplusplus.nix
     ./python.nix
     ./nix.nix
+    ./shell.nix
   ];
 }
