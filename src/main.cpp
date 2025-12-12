@@ -2,11 +2,29 @@
 #include <ESPmDNS.h>
 #include <SPIFFS.h>
 #include <WiFi.h>
+#include "esp_system.h"
+#include "esp_heap_caps.h"
+#include <ESP32Servo.h>
+
+#ifndef LED_BUILTIN
+#define LED_BUILTIN 2
+#endif
 
 const char *ssid = "IO_GUEST_EVENT";
 const char *password = "cyt5Z&Q&1i";
 
 AsyncWebServer server(80);
+
+Servo servo;
+const int SERVO_PIN = 13;
+
+enum class ServoMode { Idle, Set, Sweep };
+
+ServoMode servoMode = ServoMode::Idle;
+int currentAngle = 90;
+int targetAngle = 90;
+bool sweepDirUp = true;
+unsigned long lastServoStepMs = 0;
 
 static void handle_not_found(AsyncWebServerRequest *request) {
   digitalWrite(LED_BUILTIN, HIGH);
@@ -32,6 +50,12 @@ void setup() {
   } else {
     Serial.println("[SPIFFS] Mounted");
   }
+
+  // servo init
+  servo.attach(SERVO_PIN);
+  currentAngle = 90;
+  targetAngle = 90;
+  servo.write(currentAngle);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
@@ -75,8 +99,92 @@ void setup() {
     req->send(200, "text/plain", "LED OFF");
   });
 
+  server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest *req) {
+    int state = digitalRead(LED_BUILTIN) ? 1 : 0;
+    String payload = String("{\"gpio_state\":") + state + "}";
+    req->send(200, "application/json", payload);
+  });
+
+  server.on("/servo/left", HTTP_GET, [](AsyncWebServerRequest *req) {
+    targetAngle = 30;
+    servoMode = ServoMode::Set;
+    req->send(200, "text/plain", "Servo LEFT");
+  });
+
+  server.on("/servo/right", HTTP_GET, [](AsyncWebServerRequest *req) {
+    targetAngle = 150;
+    servoMode = ServoMode::Set;
+    req->send(200, "text/plain", "Servo RIGHT");
+  });
+
+  server.on("/servo/center", HTTP_GET, [](AsyncWebServerRequest *req) {
+    targetAngle = 90;
+    servoMode = ServoMode::Set;
+    req->send(200, "text/plain", "Servo CENTER");
+  });
+
+  server.on("/servo/sweep", HTTP_GET, [](AsyncWebServerRequest *req) {
+    servoMode = ServoMode::Sweep;
+    req->send(200, "text/plain", "Servo SWEEP");
+  });
+
+  server.on("/servo/stop", HTTP_GET, [](AsyncWebServerRequest *req) {
+    servoMode = ServoMode::Idle;
+    req->send(200, "text/plain", "Servo STOP");
+  });
+
+  server.on("/servo/set", HTTP_GET, [](AsyncWebServerRequest *req) {
+    if (req->hasParam("value")) {
+      String v = req->getParam("value")->value();
+      int pos = v.toInt();
+      if (pos < 0) pos = 0;
+      if (pos > 180) pos = 180;
+      targetAngle = pos;
+      servoMode = ServoMode::Set;
+      req->send(200, "text/plain", "Servo SET");
+    } else {
+      req->send(400, "text/plain", "Missing value");
+    }
+  });
+
   server.onNotFound(handle_not_found);
   server.begin();
 }
 
-void loop() {}
+void loop() {
+  unsigned long now = millis();
+
+  switch (servoMode) {
+    case ServoMode::Set:
+      servo.write(targetAngle);
+      currentAngle = targetAngle;
+      servoMode = ServoMode::Idle;
+      break;
+
+    case ServoMode::Sweep:
+      if (now - lastServoStepMs >= 20) {
+        lastServoStepMs = now;
+
+        if (sweepDirUp) {
+          currentAngle++;
+          if (currentAngle >= 150) {
+            currentAngle = 150;
+            sweepDirUp = false;
+          }
+        } else {
+          currentAngle--;
+          if (currentAngle <= 30) {
+            currentAngle = 30;
+            sweepDirUp = true;
+          }
+        }
+
+        servo.write(currentAngle);
+      }
+      break;
+
+    case ServoMode::Idle:
+    default:
+      break;
+  }
+}
