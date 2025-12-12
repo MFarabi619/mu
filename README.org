@@ -1,1 +1,3 @@
 * mu
+
+A simple radio that responds to not just signals, but also your voice :)
