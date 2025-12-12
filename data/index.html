@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="luxury">
+<head>
+  <meta charset="utf-8">
+  <title>mu</title>
+
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+
+<body class="p-6">
+
+  <h1 class="text-3xl font-bold mb-6">LED Control</h1>
+
+  <div class="card bg-base-200 shadow-xl p-6 max-w-sm">
+    <div class="text-sm opacity-70 mb-2">GPIO State</div>
+    <div id="state-display" class="font-mono text-2xl mb-4">OFF</div>
+
+    <button id="toggle-btn" class="btn btn-primary w-full">Turn ON</button>
+  </div>
+
+  <script>
+    const btn = document.getElementById("toggle-btn");
+    const stateEl = document.getElementById("state-display");
+
+    let isOn = false;
+    let busy = false;
+
+    async function refresh() {
+      try {
+        const res = await fetch("/api/status");
+        if (!res.ok) return;
+
+        const s = await res.json();
+        isOn = !!s.gpio_state;
+
+        stateEl.textContent = isOn ? "ON" : "OFF";
+        btn.textContent = isOn ? "Turn OFF" : "Turn ON";
+
+      } catch (err) {
+        console.error("status error", err);
+      }
+    }
+
+    btn.addEventListener("click", async () => {
+      if (busy) return;
+      busy = true;
+
+      const endpoint = isOn ? "/off" : "/on";
+
+      try {
+        await fetch(endpoint);
+      } catch (err) {
+        console.error("toggle fail", err);
+      }
+
+      busy = false;
+      refresh();
+    });
+
+    document.addEventListener("DOMContentLoaded", () => {
+      refresh();
+      setInterval(refresh, 2000);
+    });
+  </script>
+
+</body>
+</html>
