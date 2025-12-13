@@ -1,7 +1,3 @@
-Here’s a GitHub-ready `README.md` you can paste straight into your repo and tweak as needed:
-
----
-
 # Voice-Driven Physical Agent
 
 > ESP32-S3 + Raspberry Pi + ElevenLabs + Local LLM (tgpt)
@@ -378,36 +374,4 @@ Example:
 * Validate the JSON.
 * Clamp values (e.g., max 90°).
 * Map `type` + `direction` into GPIO sequences.
-
-This keeps all “robot logic” in a predictable format while still having flexible natural language.
-
----
-
-## Customization Ideas
-
-* Add **vision**: use a camera on the Pi and feed images/frames to the LLM for context-aware actions.
-* Add **wake word detection** on ESP32-S3 to avoid constant streaming.
-* Support **multiple ESP32-S3 devices** talking to the same Pi.
-* Build a small **web UI** to visualize commands, logs, and current hardware state.
-* Add **safety rules** (e.g., max travel limits, emergency stop) enforced before sending any motor command.
-
----
-
-## Roadmap
-
-* [ ] Basic motor movement (left/right, open/close).
-* [ ] More complex action schema (speed, profiles, trajectories).
-* [ ] Vision integration (object position awareness).
-* [ ] Predefined personalities / voices via ElevenLabs.
-* [ ] Configurable “skills” per device (e.g., arm, slider, gripper).
-
----
-
-## License
-
-
-
-```
-
-
 
